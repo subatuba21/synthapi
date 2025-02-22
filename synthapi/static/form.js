@@ -12,8 +12,8 @@ function ApiForm() {
       required: false,
       description: '',
       constraints: {
-        min: '',
-        max: '',
+        min: null,
+        max: null,
         enum: []
       }
     }]
@@ -31,8 +31,8 @@ function ApiForm() {
         required: false,
         description: '',
         constraints: {
-          min: '',
-          max: '',
+          min: null,
+          max: null,
           enum: []
         }
       }]
@@ -120,6 +120,7 @@ function ApiForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Submitting form...');
     const openApiSpec = {
       openapi: '3.0.0',
       info: {
@@ -130,28 +131,38 @@ function ApiForm() {
     };
 
     endpoints.forEach(endpoint => {
-      const parameters = endpoint.parameters.map(param => ({
-        name: param.name,
-        in: 'query',
-        required: param.required,
-        schema: {
-          type: param.type,
-          ...(param.constraints.min && { minimum: Number(param.constraints.min) }),
-          ...(param.constraints.max && { maximum: Number(param.constraints.max) }),
-          ...(param.constraints.enum.length && { enum: param.constraints.enum })
-        },
-        description: param.description
-      }));
+      const parameters = endpoint.parameters.map(param => {
+        // Ensure constraints object exists
+        const constraints = param.constraints || {};
+        
+        return {
+          name: param.name,
+          in: 'query',
+          required: param.required,
+          schema: {
+            type: param.type,
+            ...(constraints.min && { minimum: Number(constraints.min) }),
+            ...(constraints.max && { maximum: Number(constraints.max) }),
+            ...(constraints.enum && Array.isArray(constraints.enum) && constraints.enum.length > 0 && { enum: constraints.enum })
+          },
+          description: param.description
+        };
+      });
 
-      openApiSpec.paths[endpoint.path] = {
-        [endpoint.method.toLowerCase()]: {
-          summary: endpoint.name,
-          parameters
-        }
-      };
+      // Only add endpoints with a path
+      if (endpoint.path) {
+        openApiSpec.paths[endpoint.path] = {
+          [endpoint.method.toLowerCase()]: {
+            summary: endpoint.name,
+            parameters
+          }
+        };
+        console.log('Added path:', endpoint.path);
+      }
     });
 
     try {
+      console.log('Sending spec:', openApiSpec);
       const response = await fetch('/save', {
         method: 'POST',
         headers: {
@@ -162,10 +173,16 @@ function ApiForm() {
       
       if (response.ok) {
         alert('OpenAPI specification saved successfully!');
+        // Log the response
+        const text = await response.text();
+        console.log('Save response:', text);
       } else {
-        alert('Failed to save specification');
+        const text = await response.text();
+        console.log('Error response:', text);
+        alert('Failed to save specification: ' + text);
       }
     } catch (error) {
+      console.error('Save error:', error);
       alert('Error saving specification: ' + error.message);
     }
   };

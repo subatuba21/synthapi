@@ -5,18 +5,51 @@
     "version": "1.0.0"
   },
   "paths": {
-    "": {
+    "/v3/search": {
       "get": {
-        "summary": "",
+        "summary": "Search",
         "parameters": [
           {
-            "name": "",
+            "name": "location",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minimum": 1,
+              "maximum": 250
+            },
+            "description": "This string indicates the geographic area to be used when searching for businesses."
+          },
+          {
+            "name": "latitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "description": "Latitude of the location to search from. If latitude is provided, longitude is required too."
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "description": "Longitude of the location to search from. If longitude is provided, latitude is required too."
+          },
+          {
+            "name": "term",
             "in": "query",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": ""
+            "description": "Search term, e.g. 'food' or 'restaurants'. The term may also be the business's name, such as 'Starbucks'."
           }
         ]
       }
