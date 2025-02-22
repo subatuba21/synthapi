@@ -5,6 +5,7 @@ function ApiForm() {
     name: '',
     method: 'GET',
     path: '',
+    documentation: '',
     parameters: [{
       name: '',
       type: 'string',
@@ -23,6 +24,7 @@ function ApiForm() {
       name: '',
       method: 'GET',
       path: '',
+      documentation: '',
       parameters: [{
         name: '',
         type: 'string',
@@ -81,6 +83,41 @@ function ApiForm() {
     setEndpoints(newEndpoints);
   };
 
+  const parseDocumentation = async (endpointIndex) => {
+    const documentation = endpoints[endpointIndex].documentation;
+    if (!documentation.trim()) {
+      alert('Please paste some API documentation first');
+      return;
+    }
+
+    try {
+      const response = await fetch('/parse', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          documentation,
+          method: endpoints[endpointIndex].method,
+          path: endpoints[endpointIndex].path
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to parse documentation');
+      }
+
+      const parsedParameters = await response.json();
+      
+      // Update the endpoints state with the parsed parameters
+      const newEndpoints = [...endpoints];
+      newEndpoints[endpointIndex].parameters = parsedParameters;
+      setEndpoints(newEndpoints);
+    } catch (error) {
+      alert('Error parsing documentation: ' + error.message);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const openApiSpec = {
@@ -125,7 +162,6 @@ function ApiForm() {
       
       if (response.ok) {
         alert('OpenAPI specification saved successfully!');
-        window.close();  // Attempt to close the window
       } else {
         alert('Failed to save specification');
       }
@@ -197,6 +233,28 @@ function ApiForm() {
                   placeholder="/v3/businesses/search"
                 />
               </div>
+            </div>
+
+            <div className="border rounded p-4 bg-gray-50 space-y-2">
+              <label className="block text-sm font-medium">API Documentation</label>
+              <textarea
+                className="w-full p-2 border rounded"
+                rows="4"
+                value={endpoint.documentation}
+                onChange={(e) => handleEndpointChange(endpointIndex, 'documentation', e.target.value)}
+                placeholder="Paste the API documentation text here...
+Example:
+location (required): The location to search for businesses.
+term (optional): Search term (e.g. food, restaurants).
+radius (optional): Search radius in meters. Max value is 40000."
+              />
+              <button
+                type="button"
+                onClick={() => parseDocumentation(endpointIndex)}
+                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Parse Documentation
+              </button>
             </div>
 
             <div className="space-y-4">
