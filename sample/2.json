@@ -1,0 +1,66 @@
+{
+    "id": "nyc_rest_001",
+    "name": "The Blue Noodle House",
+    "type": "restaurant",
+    "cuisine": ["Asian", "Japanese", "Ramen"],
+    "price_range": "$$",
+    "rating": {
+      "average": 4.7,
+      "total_reviews": 1283,
+      "breakdown": {
+        "5_star": 750,
+        "4_star": 380,
+        "3_star": 103,
+        "2_star": 35,
+        "1_star": 15
+      }
+    },
+    "location": {
+      "address": {
+        "street": "234 East 42nd Street",
+        "unit": "Ground Floor",
+        "city": "New York",
+        "state": "NY",
+        "postal_code": "10017",
+        "country": "USA"
+      },
+      "geo": {
+        "lat": 40.7505,
+        "lon": -73.9734
+      }
+    },
+    "hours": {
+      "monday": { "open": "11:30", "close": "22:00" },
+      "tuesday": { "open": "11:30", "close": "22:00" },
+      "wednesday": { "open": "11:30", "close": "22:00" },
+      "thursday": { "open": "11:30", "close": "23:00" },
+      "friday": { "open": "11:30", "close": "23:00" },
+      "saturday": { "open": "12:00", "close": "23:00" },
+      "sunday": { "open": "12:00", "close": "21:00" }
+    },
+    "features": [
+      "Delivery",
+      "Takeout",
+      "Outdoor Seating",
+      "Wheelchair Accessible",
+      "Vegetarian Options"
+    ],
+    "popular_dishes": [
+      {
+        "name": "Tonkotsu Ramen",
+        "price": 16.99,
+        "order_count": 5420
+      },
+      {
+        "name": "Spicy Miso Ramen",
+        "price": 17.99,
+        "order_count": 4230
+      },
+      {
+        "name": "Chicken Karaage",
+        "price": 8.99,
+        "order_count": 3150
+      }
+    ],
+    "last_updated": "2025-02-20T14:30:00Z"
+  }
