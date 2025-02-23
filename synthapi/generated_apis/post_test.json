@@ -1,0 +1,26 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "post_test API Specification",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/v1/post_test": {
+      "get": {
+        "summary": "post_test",
+        "parameters": [
+          {
+            "name": "param",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": ""
+          }
+        ],
+        "x-api-name": "post_test"
+      }
+    }
+  }
+}

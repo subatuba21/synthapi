@@ -10,146 +10,130 @@ load_dotenv()
 
 class S3Handler:
     def __init__(self):
-        bucket_url = os.getenv('SUBHA_BUCKET_URL')
-        if not bucket_url:
-            raise ValueError("SYNTHAPI_BUCKET_URL environment variable is not set")
-        self.bucket_url = bucket_url.rstrip('/')
-    
-    def check_spec_exists(self) -> bool:
-        """Check if openapi.json exists in current directory"""
-        spec_path = Path('openapi.json')
-        return spec_path.exists()
-    
-    def read_spec(self) -> Optional[dict]:
-        """Read and validate the OpenAPI spec file"""
-        try:
-            with open('openapi.json', 'r') as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            print("✗ Error: Invalid JSON in openapi.json")
-            return None
-        except Exception as e:
-            print(f"✗ Error reading specification: {str(e)}")
-            return None
-    
-    def get_upload_urls(self, project_name: str) -> Tuple[str, str]:
-        """Generate URLs for raw text and spec files"""
-        if not project_name:
-            raise ValueError("Project name is required")
-            
-        text_url = f"{self.bucket_url}/raw/{project_name}_raw.txt"
-        spec_url = f"{self.bucket_url}/schemas/{project_name}_spec.json"
+        self.bucket_url = os.getenv('SUBHA_BUCKET_URL')
+        self.lambda_url = os.getenv('LAMBDA_URL')
         
-        return text_url, spec_url
+        if not self.bucket_url:
+            raise ValueError("SYNTHAPI_BUCKET_URL environment variable is not set")
+        if not self.lambda_url:
+            raise ValueError("LAMBDA_URL environment variable is not set")
+            
+        self.bucket_url = self.bucket_url.rstrip('/')
     
-    def upload_init_files(self, raw_text: str, project_name: str) -> Tuple[bool, Optional[str], Optional[str]]:
+    def upload_file(self, file_path: Path, dest_name: str) -> bool:
         """
-        Upload both raw text and generated OpenAPI spec for the init command
+        Upload a file to S3 in the appropriate folder based on file type
         
         Args:
-            raw_text: The raw API documentation text
-            project_name: The required project name (no spaces allowed)
+            file_path (Path): Path to the local file
+            dest_name (str): Destination name in S3
             
         Returns:
-            Tuple of (success, text_url, spec_url)
+            bool: True if upload successful, False otherwise
         """
         try:
-            # Generate URLs for both files
-            text_url, spec_url = self.get_upload_urls(project_name)
+            if not file_path.exists():
+                print(f"Error: File {file_path} does not exist")
+                return False
             
-            # Upload raw text
-            text_response = requests.put(
-                text_url,
-                data=raw_text,
-                headers={'Content-Type': 'text/plain'}
-            )
+            # Determine subfolder based on file type
+            if dest_name.endswith('.json'):
+                subfolder = 'schemas'
+            elif dest_name.endswith('_data.txt'):
+                subfolder = 'raw'
+            else:
+                print(f"Error: Unsupported file type for {dest_name}")
+                return False
             
-            if text_response.status_code not in [200, 201]:
-                print(f"✗ Error uploading raw text: Status {text_response.status_code}")
-                return False, None, None
+            # Construct the full S3 URL with appropriate subfolder
+            url = f"{self.bucket_url}/{subfolder}/{dest_name}"
             
-            # Read and upload the existing OpenAPI spec
-            spec_data = self.read_spec()
-            if not spec_data:
-                print("✗ Error: Could not read openapi.json")
-                return False, None, None
+            # Read file content
+            with open(file_path, 'rb') as f:
+                content = f.read()
             
-            # Upload spec
-            spec_response = requests.put(
-                spec_url,
-                json=spec_data,
-                headers={'Content-Type': 'application/json'}
-            )
+            # Determine content type
+            content_type = 'application/json' if dest_name.endswith('.json') else 'text/plain'
             
-            if spec_response.status_code not in [200, 201]:
-                print(f"✗ Error uploading spec: Status {spec_response.status_code}")
-                return False, None, None
-            
-            print("✓ Successfully uploaded files:")
-            print(f"Raw documentation: {text_url}")
-            print(f"OpenAPI spec: {spec_url}")
-            
-            return True, text_url, spec_url
-            
-        except requests.RequestException as e:
-            print(f"✗ Error uploading to S3: {str(e)}")
-            return False, None, None
-        except Exception as e:
-            print(f"✗ Unexpected error: {str(e)}")
-            return False, None, None
-    
-    def upload_spec(self) -> bool:
-        """Upload existing openapi.json to the public S3 bucket schemas directory"""
-        if not self.check_spec_exists():
-            print("Error: openapi.json not found in current directory.")
-            print("Please run 'synthapi generate' first to create the specification.")
-            return False
-        
-        spec_data = self.read_spec()
-        if not spec_data:
-            return False
-        
-        try:
-            # Upload to default schemas location
+            # Upload to S3
             response = requests.put(
-                f"{self.bucket_url}/schemas/openapi.json",
-                json=spec_data,
-                headers={'Content-Type': 'application/json'}
+                url,
+                data=content,
+                headers={'Content-Type': content_type}
             )
             
             if response.status_code in [200, 201]:
-                print("✓ Successfully uploaded OpenAPI specification")
-                print(f"Public URL: {self.bucket_url}/schemas/openapi.json")
+                print(f"✓ Successfully uploaded {dest_name} to {subfolder}/")
                 return True
             else:
-                print(f"✗ Error uploading to S3: Status {response.status_code}")
+                print(f"✗ Error uploading {dest_name}: Status {response.status_code}")
                 return False
                 
-        except requests.RequestException as e:
-            print(f"✗ Error uploading to S3: {str(e)}")
-            return False
         except Exception as e:
-            print(f"✗ Unexpected error: {str(e)}")
+            print(f"✗ Error uploading {dest_name}: {str(e)}")
             return False
+
+    def initialize_database(self, api_name: str) -> bool:
+        """
+        Initialize the database for an API by calling the Lambda function
+        
+        Args:
+            api_name (str): Name of the API to initialize
             
-    def download_spec(self, url: Optional[str] = None) -> Optional[dict]:
-        """Download an OpenAPI spec from S3"""
+        Returns:
+            bool: True if initialization successful, False otherwise
+        """
         try:
-            download_url = url if url else f"{self.bucket_url}/schemas/openapi.json"
-            response = requests.get(download_url)
+            # Construct Lambda URL with API name parameter
+            lambda_request_url = f"{self.lambda_url}?API_NAME={api_name}"
             
-            if response.status_code == 200:
-                return response.json()
+            # Make POST request to Lambda
+            response = requests.post(lambda_request_url)
+            
+            if response.status_code in [200, 201]:
+                print(f"✓ Successfully initialized database for {api_name}")
+                return True
             else:
-                print(f"✗ Error downloading spec: Status {response.status_code}")
-                return None
+                print(f"✗ Error initializing database: Status {response.status_code}")
+                if response.text:
+                    print(f"  Response: {response.text}")
+                return False
                 
-        except requests.RequestException as e:
-            print(f"✗ Error downloading spec: {str(e)}")
-            return None
-        except json.JSONDecodeError:
-            print("✗ Error: Invalid JSON in downloaded spec")
-            return None
         except Exception as e:
-            print(f"✗ Unexpected error: {str(e)}")
-            return None
+            print(f"✗ Error initializing database: {str(e)}")
+            return False
+
+    def init_api(self, name: str, spec_path: Path, data_path: Path) -> bool:
+        """
+        Initialize an API by uploading files to S3 and initializing the database
+        
+        Args:
+            name (str): API name
+            spec_path (Path): Path to the OpenAPI spec JSON file
+            data_path (Path): Path to the data file
+            
+        Returns:
+            bool: True if all operations successful, False otherwise
+        """
+        try:
+            # Upload spec file
+            spec_success = self.upload_file(spec_path, f"{name}.json")
+            if not spec_success:
+                return False
+
+            # Upload data file
+            data_success = self.upload_file(data_path, f"{name}_data.txt")
+            if not data_success:
+                return False
+
+            # Initialize database
+            db_success = self.initialize_database(name)
+            if not db_success:
+                print("⚠️ Warning: Files uploaded but database initialization failed")
+                return False
+
+            return True
+
+        except Exception as e:
+            print(f"✗ Error during API initialization: {str(e)}")
+            return False

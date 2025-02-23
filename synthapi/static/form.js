@@ -1,6 +1,7 @@
-const { useState } = React;
+const { useState, useEffect } = React;
 
 function ApiForm() {
+  const [apiName, setApiName] = useState('');
   const [endpoints, setEndpoints] = useState([{
     name: '',
     method: 'GET',
@@ -18,6 +19,14 @@ function ApiForm() {
       }
     }]
   }]);
+
+  useEffect(() => {
+    // Fetch API name when component mounts
+    fetch('/api-name')
+      .then(response => response.json())
+      .then(data => setApiName(data.name))
+      .catch(error => console.error('Error fetching API name:', error));
+  }, []);
 
   const addEndpoint = () => {
     setEndpoints([...endpoints, {
@@ -51,8 +60,8 @@ function ApiForm() {
       required: false,
       description: '',
       constraints: {
-        min: '',
-        max: '',
+        min: null,
+        max: null,
         enum: []
       }
     });
@@ -124,7 +133,7 @@ function ApiForm() {
     const openApiSpec = {
       openapi: '3.0.0',
       info: {
-        title: 'Generated API Spec',
+        title: `${apiName} API Specification`,
         version: '1.0.0'
       },
       paths: {}
@@ -132,7 +141,6 @@ function ApiForm() {
 
     endpoints.forEach(endpoint => {
       const parameters = endpoint.parameters.map(param => {
-        // Ensure constraints object exists
         const constraints = param.constraints || {};
         
         return {
@@ -149,20 +157,18 @@ function ApiForm() {
         };
       });
 
-      // Only add endpoints with a path
       if (endpoint.path) {
         openApiSpec.paths[endpoint.path] = {
           [endpoint.method.toLowerCase()]: {
             summary: endpoint.name,
-            parameters
+            parameters,
+            'x-api-name': apiName
           }
         };
-        console.log('Added path:', endpoint.path);
       }
     });
 
     try {
-      console.log('Sending spec:', openApiSpec);
       const response = await fetch('/save', {
         method: 'POST',
         headers: {
@@ -172,13 +178,9 @@ function ApiForm() {
       });
       
       if (response.ok) {
-        alert('OpenAPI specification saved successfully!');
-        // Log the response
-        const text = await response.text();
-        console.log('Save response:', text);
+        alert(`OpenAPI specification saved successfully for API: ${apiName}`);
       } else {
         const text = await response.text();
-        console.log('Error response:', text);
         alert('Failed to save specification: ' + text);
       }
     } catch (error) {
@@ -191,7 +193,10 @@ function ApiForm() {
     <div className="max-w-4xl mx-auto p-6">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">API Definition Form</h1>
+          <div>
+            <h1 className="text-2xl font-bold">API Definition Form</h1>
+            <p className="text-gray-600">Generating specification for: {apiName}</p>
+          </div>
           <button
             type="button"
             onClick={addEndpoint}

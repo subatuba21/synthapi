@@ -1,0 +1,26 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "testapi1 API Specification",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/v1/api1": {
+      "get": {
+        "summary": "testapi1",
+        "parameters": [
+          {
+            "name": "param",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": ""
+          }
+        ],
+        "x-api-name": "testapi1"
+      }
+    }
+  }
+}
