@@ -55,18 +55,18 @@ def lambda_handler(event, context):
                 10: <synthetic_5>
             }}
 
-            Your response will abide by the OpenAPI schema and represent a possible sample for this set.
+            Your response will abide by the OpenAPI schema and represent a possible sample for this set, taking into account {prompt_addl} when generating your response.
             Encompass your response in the <resp></resp> tags and ensure it's in valid JSON formatting and a set of synthetic data samples, not code or any other form of response.
             You only respond in the format of a list in <resp> tags with each entry a JSON dict.
-            <schema>{json_data}</schema> and here is additional information describing the synthetic data: 
-            """ + prompt_addl
+            <schema>{json_data}</schema>
+            """ 
 
         
 
         # print(request_body)
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1024,
+            "max_tokens": 2048, # increase based on constraint needs
             "messages": [
                 {
                     "role": "user",
@@ -119,10 +119,6 @@ def lambda_handler(event, context):
         pc = Pinecone(api_key=KEY)
         index = pc.Index(IDX_NAME)
 
-        # todo: use this to find he largest doc id to avoid collisions
-        max_docID = 0
-
-
         for k,v in parsed_json.items():
             # hash of contents salted by random value, in theory there'll be no collisions
             # or if there is it's a very small chance
@@ -136,7 +132,7 @@ def lambda_handler(event, context):
                         # "category": <cat>,
                     }
                 ], 
-                namespace=NAMESPACE
+                namespace=event['API_NAME']
             )
 
 
