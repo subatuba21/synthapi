@@ -13,17 +13,7 @@ class S3Handler:
         bucket_url = os.getenv('SYNTHAPI_BUCKET_URL')
         if not bucket_url:
             raise ValueError("SYNTHAPI_BUCKET_URL environment variable is not set")
-        self.bucket_url = bucket_url.rstrip('/')  # Remove trailing slash if present
-        
-    def get_upload_urls(self, project_name: str) -> Tuple[str, str]:
-        """Generate URLs for raw text and spec files"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        base_name = project_name if project_name else f"api_{timestamp}"
-        
-        text_url = f"{self.bucket_url}/raw/{base_name}_raw.txt"
-        spec_url = f"{self.bucket_url}/schemas/{base_name}_spec.json"
-        
-        return text_url, spec_url
+        self.bucket_url = bucket_url.rstrip('/')
     
     def check_spec_exists(self) -> bool:
         """Check if openapi.json exists in current directory"""
@@ -42,8 +32,67 @@ class S3Handler:
             print(f"✗ Error reading specification: {str(e)}")
             return None
     
+    def get_upload_urls(self, project_name: str) -> Tuple[str, str]:
+        """Generate URLs for raw text and spec files"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        base_name = project_name if project_name else f"api_{timestamp}"
+        
+        text_url = f"{self.bucket_url}/raw/{base_name}_raw.txt"
+        spec_url = f"{self.bucket_url}/schemas/{base_name}_spec.json"
+        
+        return text_url, spec_url
+    
+    def upload_init_files(self, raw_text: str, project_name: Optional[str] = None) -> Tuple[bool, Optional[str], Optional[str]]:
+        """
+        Upload both raw text and generated OpenAPI spec for the init command
+        """
+        try:
+            # Generate URLs for both files
+            text_url, spec_url = self.get_upload_urls(project_name)
+            
+            # Upload raw text
+            text_response = requests.put(
+                text_url,
+                data=raw_text,
+                headers={'Content-Type': 'text/plain'}
+            )
+            
+            if text_response.status_code not in [200, 201]:
+                print(f"✗ Error uploading raw text: Status {text_response.status_code}")
+                return False, None, None
+            
+            # Read and upload the existing OpenAPI spec
+            spec_data = self.read_spec()
+            if not spec_data:
+                print("✗ Error: Could not read openapi.json")
+                return False, None, None
+            
+            # Upload spec
+            spec_response = requests.put(
+                spec_url,
+                json=spec_data,
+                headers={'Content-Type': 'application/json'}
+            )
+            
+            if spec_response.status_code not in [200, 201]:
+                print(f"✗ Error uploading spec: Status {spec_response.status_code}")
+                return False, None, None
+            
+            print("✓ Successfully uploaded files:")
+            print(f"Raw documentation: {text_url}")
+            print(f"OpenAPI spec: {spec_url}")
+            
+            return True, text_url, spec_url
+            
+        except requests.RequestException as e:
+            print(f"✗ Error uploading to S3: {str(e)}")
+            return False, None, None
+        except Exception as e:
+            print(f"✗ Unexpected error: {str(e)}")
+            return False, None, None
+    
     def upload_spec(self) -> bool:
-        """Upload openapi.json to the public S3 bucket schemas directory"""
+        """Upload existing openapi.json to the public S3 bucket schemas directory"""
         if not self.check_spec_exists():
             print("Error: openapi.json not found in current directory.")
             print("Please run 'synthapi generate' first to create the specification.")
@@ -75,78 +124,9 @@ class S3Handler:
         except Exception as e:
             print(f"✗ Unexpected error: {str(e)}")
             return False
-    
-    def upload_init_files(self, raw_text: str, project_name: Optional[str] = None) -> Tuple[bool, Optional[str], Optional[str]]:
-        """
-        Upload both raw text and initial spec files for the init command
-        
-        Args:
-            raw_text: The raw API documentation text
-            project_name: Optional project name for file naming
-            
-        Returns:
-            Tuple of (success, text_url, spec_url)
-        """
-        try:
-            # Generate URLs for both files
-            text_url, spec_url = self.get_upload_urls(project_name)
-            
-            # Create initial OpenAPI spec
-            spec_data = {
-                "openapi": "3.0.0",
-                "info": {
-                    "title": project_name if project_name else "API Specification",
-                    "version": "1.0.0",
-                    "description": "Generated from raw documentation"
-                },
-                "paths": {}
-            }
-            
-            # Upload raw text
-            text_response = requests.put(
-                text_url,
-                data=raw_text,
-                headers={'Content-Type': 'text/plain'}
-            )
-            
-            if text_response.status_code not in [200, 201]:
-                print(f"✗ Error uploading raw text: Status {text_response.status_code}")
-                return False, None, None
-            
-            # Upload spec
-            spec_response = requests.put(
-                spec_url,
-                json=spec_data,
-                headers={'Content-Type': 'application/json'}
-            )
-            
-            if spec_response.status_code not in [200, 201]:
-                print(f"✗ Error uploading spec: Status {spec_response.status_code}")
-                return False, None, None
-            
-            print("✓ Successfully uploaded files:")
-            print(f"Raw documentation: {text_url}")
-            print(f"OpenAPI spec: {spec_url}")
-            
-            return True, text_url, spec_url
-            
-        except requests.RequestException as e:
-            print(f"✗ Error uploading to S3: {str(e)}")
-            return False, None, None
-        except Exception as e:
-            print(f"✗ Unexpected error: {str(e)}")
-            return False, None, None
             
     def download_spec(self, url: Optional[str] = None) -> Optional[dict]:
-        """
-        Download an OpenAPI spec from S3
-        
-        Args:
-            url: Optional specific URL to download from, otherwise uses default
-            
-        Returns:
-            The spec as a dictionary if successful, None otherwise
-        """
+        """Download an OpenAPI spec from S3"""
         try:
             download_url = url if url else f"{self.bucket_url}/schemas/openapi.json"
             response = requests.get(download_url)
