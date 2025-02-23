@@ -2,9 +2,11 @@ from aws_cdk import (
     # Duration,
     Stack,
     # aws_sqs as sqs,
-    aws_lambda as _lambda
+    aws_lambda as _lambda,
+    aws_iam as iam
 )
 from constructs import Construct
+from aws_cdk.aws_lambda_python_alpha import PythonFunction
 
 class FapiStack(Stack):
 
@@ -20,10 +22,17 @@ class FapiStack(Stack):
             code=_lambda.Code.from_asset("fapi/lambda"),  # Directory containing your Lambda code
         )
 
-        # The code that defines your stack goes here
+        pinecone = PythonFunction(
+            self, 
+            "pinecone_retriever",
+            runtime=_lambda.Runtime.PYTHON_3_9,  # Choose your Python version
+            handler="handler",            # Format: file.function_name
+            entry="fapi/lambda",
+            index="retrieve_pinecone.py"  # Directory containing your Lambda code
+        )
 
-        # example resource
-        # queue = sqs.Queue(
-        #     self, "FapiQueue",
-        #     visibility_timeout=Duration.seconds(300),
-        # )
+        pinecone.add_permission(
+            "BedrockInvoke",
+            principal=iam.ServicePrincipal("bedrock.amazonaws.com"),
+            action="lambda:InvokeFunction"
+        )
