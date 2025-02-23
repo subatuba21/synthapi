@@ -2,6 +2,8 @@
 
 A tool for local API mocking and OpenAPI specification generation. SynthAPI helps you create OpenAPI specifications from documentation and set up mock API servers for development and testing.
 
+Authors: Aarav Gupta, Nisarg Minesh Patel, Sarvesh Sathish, Subhajit Das
+
 ## Features
 
 - Generate OpenAPI 3.0 specifications using a web-based form
@@ -150,3 +152,5 @@ Future features planned:
 - OpenAPI specification validation
 - Custom response templating
 - Multiple specification format support (YAML, JSON)
+
+  
