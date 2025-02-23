@@ -10,7 +10,7 @@ load_dotenv()
 
 class S3Handler:
     def __init__(self):
-        bucket_url = os.getenv('SYNTHAPI_BUCKET_URL')
+        bucket_url = os.getenv('SUBHA_BUCKET_URL')
         if not bucket_url:
             raise ValueError("SYNTHAPI_BUCKET_URL environment variable is not set")
         self.bucket_url = bucket_url.rstrip('/')
@@ -34,17 +34,24 @@ class S3Handler:
     
     def get_upload_urls(self, project_name: str) -> Tuple[str, str]:
         """Generate URLs for raw text and spec files"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        base_name = project_name if project_name else f"api_{timestamp}"
-        
-        text_url = f"{self.bucket_url}/raw/{base_name}_raw.txt"
-        spec_url = f"{self.bucket_url}/schemas/{base_name}_spec.json"
+        if not project_name:
+            raise ValueError("Project name is required")
+            
+        text_url = f"{self.bucket_url}/raw/{project_name}_raw.txt"
+        spec_url = f"{self.bucket_url}/schemas/{project_name}_spec.json"
         
         return text_url, spec_url
     
-    def upload_init_files(self, raw_text: str, project_name: Optional[str] = None) -> Tuple[bool, Optional[str], Optional[str]]:
+    def upload_init_files(self, raw_text: str, project_name: str) -> Tuple[bool, Optional[str], Optional[str]]:
         """
         Upload both raw text and generated OpenAPI spec for the init command
+        
+        Args:
+            raw_text: The raw API documentation text
+            project_name: The required project name (no spaces allowed)
+            
+        Returns:
+            Tuple of (success, text_url, spec_url)
         """
         try:
             # Generate URLs for both files

@@ -102,13 +102,22 @@ def generate():
 @app.command()
 def init(
     data: str = typer.Option(..., "--data", "-d", help="Initial API documentation text"),
-    name: Optional[str] = typer.Option(None, "--name", "-n", help="Project name (optional)")
+    name: str = typer.Option(..., "--name", "-n", help="Project name (no spaces allowed)")
 ):
     """Initialize a new API specification with documentation text"""
+    # Validate that project name doesn't contain spaces
+    if " " in name:
+        print("Error: Project name cannot contain spaces")
+        raise typer.Exit(1)
+        
     try:
+        # Initialize S3 handler
         s3_handler = S3Handler()
+        
+        # Upload both raw text and specification files
         success, text_url, spec_url = s3_handler.upload_init_files(data, name)
         
+        # Exit with error if upload failed
         if not success:
             raise typer.Exit(1)
             

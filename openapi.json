@@ -5,9 +5,9 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/v3/businesses/restaurants": {
+    "/v3/search": {
       "get": {
-        "summary": "Search Restaurants",
+        "summary": "Search",
         "parameters": [
           {
             "name": "location",
@@ -50,43 +50,6 @@
               "type": "string"
             },
             "description": "Search term, e.g. \"food\" or \"restaurants\". The term may also be the business's name, such as \"Starbucks\". If term is not included the endpoint will default to searching across businesses from a small number of popular categories."
-          },
-          {
-            "name": "radius",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 40000
-            },
-            "description": "A suggested search radius in meters. This field is used as a suggestion to the search. The actual search radius may be lower than the suggested radius in dense urban areas, and higher in regions of less business density. If the specified value is too large, a AREA_TOO_LARGE error may be returned. The max value is 40,000 meters (about 25 miles)."
-          },
-          {
-            "name": "categories",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "array"
-            },
-            "description": "Categories to filter the search results with. See the list of supported categories. The category filter can be a list of comma delimited categories. e.g., \"bars,french\" will filter by Bars OR French. The category alias should be used (e.g. \"discgolf\", not \"Disc Golf\")."
-          },
-          {
-            "name": "menu",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "A comma delimited string representing menu items served at this restaurant."
-          },
-          {
-            "name": "ingredients",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "A comma delimited string representing ingredients used at this restaurant, this is used to inform users of potential allergens."
           }
         ]
       }
