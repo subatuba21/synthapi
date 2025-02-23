@@ -1,3 +1,7 @@
 {
-  "apis": {}
+  "apis": {
+    "test_api": {
+      "initialized": true
+    }
+  }
 }

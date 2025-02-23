@@ -7,8 +7,6 @@ import json
 import socket
 import time
 from pathlib import Path
-from typing import Optional
-
 from .parser import DocParser
 from .s3_handler import S3Handler
 from .api_registry import (
@@ -18,6 +16,7 @@ from .api_registry import (
     mark_api_as_initialized,
     clean_registry
 )
+from .api_client import get
 
 # Initialize typer app
 app = typer.Typer(name="synthapi")
@@ -26,7 +25,7 @@ app = typer.Typer(name="synthapi")
 GENERATED_API_DIR = Path(__file__).parent / "generated_apis"
 GENERATED_API_DIR.mkdir(exist_ok=True)
 
-def is_port_in_use(port: int) -> bool:
+def is_port_in_use(port):
     """Check if a port is already in use"""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
@@ -35,7 +34,7 @@ def is_port_in_use(port: int) -> bool:
         except OSError:
             return True
 
-def find_available_port(start_port: int = 8000, max_attempts: int = 10) -> Optional[int]:
+def find_available_port(start_port=8000, max_attempts=10):
     """Find an available port starting from start_port"""
     for port in range(start_port, start_port + max_attempts):
         if not is_port_in_use(port):
@@ -176,10 +175,7 @@ def start_server():
 
 @app.command()
 def clean(
-    force: bool = typer.Option(
-        False, "--force", "-f", 
-        help="Clean without confirmation"
-    )
+    force=typer.Option(False, "--force", "-f", help="Clean without confirmation")
 ):
     """Clean the API registry and remove all generated files"""
     if not force:
@@ -197,7 +193,7 @@ def clean(
     
 @app.command()
 def generate(
-    name: str = typer.Option(..., "--name", "-n", help="Project name (must not contain spaces)")
+    name=typer.Option(..., "--name", "-n", help="Project name (must not contain spaces)")
 ):
     """Generate an OpenAPI specification using a web form"""
     if " " in name:
@@ -216,8 +212,8 @@ def generate(
 
 @app.command()
 def init(
-    name: str = typer.Option(..., "--name", "-n", help="Project name (must exist in registry)"),
-    data: Optional[str] = typer.Option(None, "--data", "-d", help="Context data for LLM (optional)"),
+    name=typer.Option(..., "--name", "-n", help="Project name (must exist in registry)"),
+    data=typer.Option(None, "--data", "-d", help="Context data for LLM (optional)")
 ):
     """Initialize an API by sending its spec to S3 and setting up the database"""
     # Get all specs and their status
@@ -288,10 +284,52 @@ def init(
         print(f"❌ Error: {str(e)}")
         raise typer.Exit(1)
     
+@app.command()
+def extend(
+    name: str = typer.Option(..., "--name", "-n", help="API name to extend"),
+    data: str = typer.Option(..., "--data", "-d", help="Data prompt for extending the API"),
+):
+    """Extend an API's data by uploading a new data prompt and updating the database"""
+    try:
+        # Check if API exists and is initialized
+        all_specs = get_all_specs()
+        if name not in all_specs:
+            print(f"❌ Error: '{name}' is not in the registry.")
+            return
+        
+        if not all_specs[name]:
+            print(f"❌ Error: '{name}' has not been initialized yet.")
+            return
+
+        # Create and upload data file
+        s3_handler = S3Handler()
+        data_file_path = GENERATED_API_DIR / f"{name}_data.txt"
+        
+        # Write the data prompt to a file
+        with open(data_file_path, "w") as f:
+            f.write(data)
+
+        # Upload the data file to S3
+        if s3_handler.upload_file(data_file_path, f"{name}_data.txt"):
+            # Initialize database with new data
+            if s3_handler.initialize_database(name):
+                print(f"✅ Successfully extended {name}:")
+                print(f"  • Uploaded new {name}_data.txt to raw/")
+                print(f"  • Updated database with new data")
+            else:
+                print("❌ Error: Failed to update database")
+                raise typer.Exit(1)
+        else:
+            print("❌ Error: Failed to upload data file")
+            raise typer.Exit(1)
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        raise typer.Exit(1)
     
 @app.command()
 def list(
-    all: bool = typer.Option(False, "--all", "-a", help="Show all APIs including initialized ones")
+    all=typer.Option(False, "--all", "-a", help="Show all APIs including initialized ones")
 ):
     """List available APIs that can be initialized"""
     if all:
@@ -313,6 +351,9 @@ def list(
         print("Available APIs for initialization:")
         for spec in specs:
             print(f"  • {spec}")
+
+# Add the get command
+app.command()(get)
 
 if __name__ == "__main__":
     app()
