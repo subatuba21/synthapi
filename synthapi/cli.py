@@ -100,10 +100,20 @@ def generate():
     start_server()
 
 @app.command()
-def init():
-    """Upload openapi.json to the public S3 bucket"""
-    handler = S3Handler()
-    if not handler.upload_spec():
+def init(
+    data: str = typer.Option(..., "--data", "-d", help="Initial API documentation text"),
+    name: Optional[str] = typer.Option(None, "--name", "-n", help="Project name (optional)")
+):
+    """Initialize a new API specification with documentation text"""
+    try:
+        s3_handler = S3Handler()
+        success, text_url, spec_url = s3_handler.upload_init_files(data, name)
+        
+        if not success:
+            raise typer.Exit(1)
+            
+    except Exception as e:
+        print(f"Error: {str(e)}")
         raise typer.Exit(1)
 
 if __name__ == "__main__":

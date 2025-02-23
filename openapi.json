@@ -5,25 +5,25 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/v3/search": {
+    "/v1/property_rents": {
       "get": {
-        "summary": "Search",
+        "summary": "Property Rents",
         "parameters": [
           {
             "name": "location",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "minimum": 1,
               "maximum": 250
             },
-            "description": "This string indicates the geographic area to be used when searching for businesses."
+            "description": "This string indicates the geographic area to be used when searching for businesses. Examples: \"New York City\", \"NYC\", \"350 5th Ave, New York, NY 10118\". Businesses returned in the response may not be strictly within the specified location."
           },
           {
             "name": "latitude",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "number",
               "minimum": -90,
@@ -34,7 +34,7 @@
           {
             "name": "longitude",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "number",
               "minimum": -180,
@@ -49,7 +49,63 @@
             "schema": {
               "type": "string"
             },
-            "description": "Search term, e.g. 'food' or 'restaurants'. The term may also be the business's name, such as 'Starbucks'."
+            "description": "Search term, e.g. \"food\" or \"restaurants\". The term may also be the business's name, such as \"Starbucks\". If term is not included the endpoint will default to searching across businesses from a small number of popular categories."
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 40000
+            },
+            "description": "A suggested search radius in meters. This field is used as a suggestion to the search. The actual search radius may be lower than the suggested radius in dense urban areas, and higher in regions of less business density. If the specified value is too large, a AREA_TOO_LARGE error may be returned. The max value is 40,000 meters (about 25 miles)."
+          },
+          {
+            "name": "categories",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array"
+            },
+            "description": "Categories to filter the search results with. See the list of supported categories. The category filter can be a list of comma delimited categories. e.g., \"bars,french\" will filter by Bars OR French. The category alias should be used (e.g. \"discgolf\", not \"Disc Golf\")."
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Locale code in the format of {language code}_{country code}. See the list of supported locales."
+          },
+          {
+            "name": "price",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "maximum": 4
+            },
+            "description": "Pricing levels to filter the search result with: 1 = $, 2 = $$, 3 = $$$, 4 = $$$$. The price filter can be a list of comma delimited pricing levels. e.g., \"1, 2, 3\" will filter the results to show the ones that are $, $$, or $$$."
+          },
+          {
+            "name": "open_now",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "When set to true, only return the businesses that are open now. Notice that open_at and open_now cannot be used together."
+          },
+          {
+            "name": "open_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "An integer representing the Unix time in the timezone of the search location. If specified, it will return businesses open at the given time. Notice that open_at and open_now cannot be used together."
           }
         ]
       }
