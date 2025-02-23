@@ -1,156 +1,129 @@
 # SynthAPI
 
-A tool for local API mocking and OpenAPI specification generation. SynthAPI helps you create OpenAPI specifications from documentation and set up mock API servers for development and testing.
-
-Authors: Aarav Gupta, Nisarg Minesh Patel, Sarvesh Sathish, Subhajit Das
-
-## Features
-
-- Generate OpenAPI 3.0 specifications using a web-based form
-- Parse API documentation using GPT-4 to extract parameters
-- Save specifications in OpenAPI JSON format
-- Easy-to-use command-line interface
+A tool for local API mocking with dynamic data generation. SynthAPI helps you create, initialize, and manage mock APIs using OpenAPI specifications and AI-generated data.
 
 ## Installation
 
-### Prerequisites
-
-- Python 3.7 or higher
-- OpenAI API key for documentation parsing
-
-### Steps
-
 1. Clone the repository:
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/yourusername/synthapi.git
 cd synthapi
 ```
 
-2. Install the package:
+2. Install in development mode:
 ```bash
 pip install -e .
 ```
 
-3. Set up your environment variables:
-Create a `.env` file in your project root:
+## Environment Setup
+
+Before using SynthAPI, make sure to set up the following environment variables:
+
 ```bash
-OPENAI_API_KEY=your_api_key_here
+OPENAI_API_KEY=your_openai_api_key
+SUBHA_BUCKET_URL=your_s3_bucket_url
+LAMBDA_URL=your_lambda_function_url
 ```
 
-## Usage
+You can use a `.env` file to store these variables.
 
-### CLI Commands
+## CLI Commands
 
-Currently, SynthAPI supports the following commands:
+### Generate an API Specification
 
-#### Generate OpenAPI Specification
-
-Start the web interface for creating OpenAPI specifications:
+Create a new OpenAPI specification using an interactive web form:
 
 ```bash
-synthapi generate
+synthapi generate --name your_api_name
 ```
 
 This will:
-1. Start a local server on port 8000
-2. Open your default browser to the form interface
-3. Allow you to create and save OpenAPI specifications
+- Open a web form in your browser
+- Allow you to define endpoints, parameters, and documentation
+- Generate and save an OpenAPI 3.0 specification
 
-### Web Interface
+### Initialize an API
 
-The web interface provides a form-based approach to creating API specifications:
+Initialize an API by uploading its specification and setting up the database:
 
-1. Click "Add Endpoint" to create a new endpoint definition
-2. Fill in the endpoint details:
-   - Name: A descriptive name for the endpoint
-   - Method: HTTP method (GET, POST, PUT, DELETE)
-   - Path: The API path (e.g., /v3/businesses/search)
-   
-3. Add API documentation:
-   - Paste your API documentation text
-   - Click "Parse Documentation" to automatically extract parameters
-   
-4. Add or modify parameters:
-   - Name, type, and whether it's required
-   - Description and constraints
-   - For numeric types, specify minimum and maximum values
-   
-5. Click "Generate OpenAPI Spec" to save the specification
-   - The specification will be saved as `openapi.json` in your current directory
+```bash
+synthapi init --name your_api_name [--data "Optional context data for LLM"]
+```
 
-### Example
+This will:
+- Upload the OpenAPI specification to S3
+- Upload any provided context data
+- Initialize the database through Lambda
+- Mark the API as initialized in the registry
 
-Here's an example of API documentation that can be parsed:
+### Extend an API
+
+Update an existing API's data and database:
+
+```bash
+synthapi extend --name your_api_name --data "New data prompt for the API"
+```
+
+This will:
+- Upload a new data prompt file to S3
+- Trigger the database update through Lambda
+- Only works with initialized APIs
+
+### List Available APIs
+
+View available APIs in the registry:
+
+```bash
+synthapi list              # Show uninitialized APIs only
+synthapi list --all       # Show all APIs with their status
+```
+
+### Clean Registry
+
+Remove all registered APIs and generated files:
+
+```bash
+synthapi clean            # With confirmation prompt
+synthapi clean --force   # Skip confirmation
+```
+
+## API Parameters
+
+When defining API parameters in the web form, you can:
+- Set parameter names, types, and descriptions
+- Mark parameters as required
+- Define constraints (min/max values, enums)
+- Parse parameter documentation automatically
+
+## Example Parameter Documentation
+
+Here's an example of parameter documentation that can be parsed:
 
 ```
-location (required): The location to search for businesses. Example: 'NYC'
+location (required): The location to search for businesses.
 term (optional): Search term (e.g. food, restaurants).
 radius (optional): Search radius in meters. Max value is 40000.
 ```
 
-After parsing, this will generate parameter definitions in the OpenAPI specification format.
+## Flow
+
+1. Generate API spec using the web form (`generate`)
+2. Initialize the API with optional context (`init`)
+3. Extend the API's data as needed (`extend`)
+
+## Error Handling
+
+The CLI provides clear error messages for common issues:
+- Missing environment variables
+- Invalid API names
+- Network/S3 upload failures
+- Database initialization errors
 
 ## Development
 
-### Project Structure
-
-```
-synthapi/
-├── __init__.py
-├── cli.py                 # Main CLI entry point
-├── parser.py             # API documentation parser
-├── static/              # Frontend assets
-│   ├── index.html
-│   └── form.js
-```
-
-### Adding New Features
-
-1. Create new Python modules for your features
-2. Add new CLI commands in `cli.py`
-3. Update dependencies in `pyproject.toml`
-4. Test locally using `pip install -e .`
-
-### Running Tests
-
-```bash
-# TODO: Add testing instructions
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Server Already Running**
-   If you get a port conflict error when running `synthapi generate`, ensure no other service is using port 8000.
-
-2. **Parse Documentation Not Working**
-   Make sure you've set up your `OPENAI_API_KEY` in the `.env` file correctly.
-
-3. **Browser Not Opening**
-   The tool attempts to open your default browser automatically. If this doesn't work, manually navigate to `http://localhost:8000`.
-
-### Getting Help
-
-If you encounter any issues:
-1. Check the troubleshooting section above
-2. Look for existing issues in the GitHub repository
-3. Create a new issue with details about your problem
-
-## Roadmap
-
-Future features planned:
-- Mock API server generation from OpenAPI specs
-- OpenAPI specification validation
-- Custom response templating
-- Multiple specification format support (YAML, JSON)
-
-  
+The project uses:
+- Typer for CLI interface
+- OpenAI GPT-4 for documentation parsing
+- React for the web form interface
+- S3 for specification and data storage
+- Lambda for database operations
