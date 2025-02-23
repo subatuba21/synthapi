@@ -1,5 +1,6 @@
 import json
 import boto3
+import botocore
 import re
 from pinecone import Pinecone
 import hashlib
@@ -19,9 +20,19 @@ def lambda_handler(event, context):
     file_key = None
     prompt_addl_key = None
 
-    file_key = "schemas/openapi.json"
+    # todo: use this to grab the json spec from the s3 bucket
+
+    # assumption: api_name exists in the schemas, raw directories in bucket
+    API_NAMESPACE = event['queryStringParameters']['API_NAME']
+    N_POINTS = 10
+    try:
+        N_POINTS = event['queryStringParameters']['N_POINTS']
+    except:
+        pass
+
+    file_key = f"schemas/{API_NAMESPACE}.json"
     # Only process files in the schemas directory    
-    prompt_addl_key = "raw/openapi.txt"
+    prompt_addl_key = f"raw/{API_NAMESPACE}.txt"
     
     print(f"Processing file: {file_key}")
     print(f"Processing prompt: {prompt_addl_key}")
@@ -31,6 +42,7 @@ def lambda_handler(event, context):
     s3.delete_object(Bucket=bucket_name, Key='output/result.json')
 
     try:
+
         # Invoke the model using the Bedrock runtime for the json
         print(file_key)
         response = s3.get_object(Bucket=bucket_name, Key=file_key)
@@ -39,13 +51,21 @@ def lambda_handler(event, context):
         print(file_key, "done")
 
 
-         # Invoke the model using the Bedrock runtime for the response prompt
+        # Invoke the model using the Bedrock runtime for the response prompt
         print(prompt_addl_key)
-        response_prompt = s3.get_object(Bucket=bucket_name, Key=prompt_addl_key)
-        prompt_addl = response_prompt['Body'].read().decode('utf-8')
-        print(prompt_addl)
-        print(prompt_addl_key, "done")
+        prompt_addl = ""
+        # if additional prompt doesn't exist
+        try:
+            s3.head_object(Bucket=bucket_name, Key=prompt_addl_key)
+            response_prompt = s3.get_object(Bucket=bucket_name, Key=prompt_addl_key)
+            prompt_addl = response_prompt['Body'].read().decode('utf-8')
+            print(prompt_addl)
+            print(prompt_addl_key, "done")
 
+        except botocore.exceptions.ClientError as e:
+            prompt_addl = ""
+
+        conf = f", taking into account {prompt_addl} when generating your response" if prompt_addl != "" else ""
         prompt = f"""You are an API based off of the OpenAPI schema provided in the XML tags 
             You will play the role of this API and generate samples in a JSON format abiding by the <schema> passed, so that the output returned is a properly formatted JSON file:
  
@@ -55,7 +75,7 @@ def lambda_handler(event, context):
                 10: <synthetic_5>
             }}
 
-            Your response will abide by the OpenAPI schema and represent a possible sample for this set, taking into account {prompt_addl} when generating your response.
+            Your response will abide by the OpenAPI schema and represent a possible sample for this set{conf}.
             Encompass your response in the <resp></resp> tags and ensure it's in valid JSON formatting and a set of synthetic data samples, not code or any other form of response.
             You only respond in the format of a list in <resp> tags with each entry a JSON dict.
             <schema>{json_data}</schema>
@@ -118,11 +138,16 @@ def lambda_handler(event, context):
         
         pc = Pinecone(api_key=KEY)
         index = pc.Index(IDX_NAME)
+        # print(event.items())
+        # print(event['queryStringParameters'])
+        # print(event['queryStringParameters']['API_NAME'])
+
+        # return event['queryStringParameters']
 
         for k,v in parsed_json.items():
             # hash of contents salted by random value, in theory there'll be no collisions
             # or if there is it's a very small chance
-            d_id = hashlib.sha256(str(v) + str(random.randint(-sys.maxsize-1, sys.maxsize)))
+            d_id = str(hash((str(v) + str(random.randint(-sys.maxsize-1, sys.maxsize))).encode('utf-8')))
             index.upsert_records(
                 records=[
                     {
@@ -132,7 +157,7 @@ def lambda_handler(event, context):
                         # "category": <cat>,
                     }
                 ], 
-                namespace=event['API_NAME']
+                namespace=API_NAMESPACE
             )
 
 
@@ -146,5 +171,8 @@ def lambda_handler(event, context):
         # Print the model's response
         # print("\nGenerated Synthetic Data:")
         # print(clean_text)
+        # return "google.com"
+        # return event['API_NAME']
+        return None # do we need to do anything?
     except Exception as e:
         print("An error occurred:", e)

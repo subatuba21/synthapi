@@ -200,6 +200,41 @@ class FapiStack(Stack):
 
 
 
+        synthapi_server = PythonFunction(
+            self,
+            "synthapi_server",
+            runtime=_lambda.Runtime.PYTHON_3_9,  # Choose your Python version
+            handler="handler",
+            entry="fapi/lambda",
+            index="synthapi_server.py",
+            environment={
+                'agent_id': agent.ref,
+                'agent_alias_id': cfn_agent_alias.ref
+            },
+            timeout=core.Duration.seconds(30)
+        )
+
+        synth_fn_url = synthapi_server.add_function_url(
+            auth_type=_lambda.FunctionUrlAuthType.NONE,  # Makes it publicly accessible
+            cors=_lambda.FunctionUrlCorsOptions(
+                allowed_origins=["*"],
+                allowed_methods=[_lambda.HttpMethod.ALL],
+                allowed_headers=["*"]
+            )
+        )
+
+        CfnOutput(
+            self, 
+            "synthapi_serverURL",
+            value=synth_fn_url.url,
+            description="URL for the synth server Lambda function"
+        )
+
+
+
+
+
+
 
 
 
