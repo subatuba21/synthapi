@@ -2,6 +2,9 @@ import json
 import boto3
 import re
 from pinecone import Pinecone
+import hashlib
+import random
+import sys
 
 KEY = "pcsk_5fjTMD_94yGbMH2Ujw2d3CEqfyvByLqeswYEP4LGLePfYQzfsiEKK1RoY2Z7UX9qnQ3sq3"
 IDX_NAME = "quickstart2"
@@ -12,19 +15,13 @@ NAMESPACE = "records"
 def lambda_handler(event, context):
     # Create a Bedrock runtime client
     s3 = boto3.client('s3')
-    bucket_name = 'gt-hacklytics-2025-snythapi'
+    bucket_name = 'gt-hacklytics-2025-synthapi'
     file_key = None
     prompt_addl_key = None
-    for record in event['Records']:
-        file_key = record['s3']['object']['key']
-        # Only process files in the schemas directory
-        if not file_key.startswith('schemas/'):
-            print(f"Skipping file not in schemas directory: {file_key}")
-            continue
-        
-        prompt_addl_key = file_key.replace("schemas/", "raw/")
-        prompt_addl_key = prompt_addl_key.replace(".json", ".txt")
-        prompt_addl_key = prompt_addl_key.replace("_spec", "_raw")
+
+    file_key = "schemas/openapi.json"
+    # Only process files in the schemas directory    
+    prompt_addl_key = "raw/openapi.txt"
     
     print(f"Processing file: {file_key}")
     print(f"Processing prompt: {prompt_addl_key}")
@@ -35,14 +32,19 @@ def lambda_handler(event, context):
 
     try:
         # Invoke the model using the Bedrock runtime for the json
+        print(file_key)
         response = s3.get_object(Bucket=bucket_name, Key=file_key)
         file_content = response['Body'].read().decode('utf-8')
         json_data = json.loads(file_content)
+        print(file_key, "done")
+
 
          # Invoke the model using the Bedrock runtime for the response prompt
+        print(prompt_addl_key)
         response_prompt = s3.get_object(Bucket=bucket_name, Key=prompt_addl_key)
         prompt_addl = response_prompt['Body'].read().decode('utf-8')
         print(prompt_addl)
+        print(prompt_addl_key, "done")
 
         prompt = f"""You are an API based off of the OpenAPI schema provided in the XML tags 
             You will play the role of this API and generate samples in a JSON format abiding by the <schema> passed, so that the output returned is a properly formatted JSON file:
@@ -120,8 +122,11 @@ def lambda_handler(event, context):
         # todo: use this to find he largest doc id to avoid collisions
         max_docID = 0
 
+
         for k,v in parsed_json.items():
-            d_id = f"doc_{k+max_docID}"
+            # hash of contents salted by random value, in theory there'll be no collisions
+            # or if there is it's a very small chance
+            d_id = hashlib.sha256(str(v) + str(random.randint(-sys.maxsize-1, sys.maxsize)))
             index.upsert_records(
                 records=[
                     {
