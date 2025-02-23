@@ -1,16 +1,3 @@
 {
-  "apis": {
-    "testapi1": {
-      "initialized": true
-    },
-    "testapi2": {
-      "initialized": true
-    },
-    "testapi3": {
-      "initialized": true
-    },
-    "post_test": {
-      "initialized": true
-    }
-  }
+  "apis": {}
 }
