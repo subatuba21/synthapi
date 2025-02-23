@@ -8,9 +8,11 @@ version = "0.1.0"
 description = "A tool for local API mocking"
 requires-python = ">=3.7"
 dependencies = [
-    "typer[all]>=0.9.0",  # Added [all] to include all optional dependencies
-    "openai>=1.0.0",      # For GPT-4 API integration
-    "python-dotenv>=1.0.0"  # For environment variable management
+    "typer[all]>=0.9.0",
+    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "boto3>=1.34.0",  # Added for S3 support
+    "requests>=2.31.0"
 ]
 
 [project.scripts]

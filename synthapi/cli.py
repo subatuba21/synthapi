@@ -7,6 +7,9 @@ import json
 from pathlib import Path
 from .parser import DocParser
 
+from .s3_handler import S3Handler
+from typing import Optional
+
 # Initialize typer with an explicit name
 app = typer.Typer(name="synthapi")
 
@@ -95,6 +98,13 @@ def main():
 def generate():
     """Generate an OpenAPI specification using a web form"""
     start_server()
+
+@app.command()
+def init():
+    """Upload openapi.json to the public S3 bucket"""
+    handler = S3Handler()
+    if not handler.upload_spec():
+        raise typer.Exit(1)
 
 if __name__ == "__main__":
     app()
