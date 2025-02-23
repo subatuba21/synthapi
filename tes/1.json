@@ -1,0 +1,67 @@
+{
+  "id": "nyc_rest_002",
+  "name": "Mama Rosa's Trattoria",
+  "type": "restaurant",
+  "cuisine": ["Italian", "Mediterranean", "Pizza"],
+  "price_range": "$$$",
+  "rating": {
+    "average": 4.5,
+    "total_reviews": 2156,
+    "breakdown": {
+      "5_star": 1200,
+      "4_star": 650,
+      "3_star": 200,
+      "2_star": 75,
+      "1_star": 31
+    }
+  },
+  "location": {
+    "address": {
+      "street": "187 Sullivan Street",
+      "unit": null,
+      "city": "New York",
+      "state": "NY",
+      "postal_code": "10012",
+      "country": "USA"
+    },
+    "geo": {
+      "lat": 40.7295,
+      "lon": -74.0023
+    }
+  },
+  "hours": {
+    "monday": { "open": "16:00", "close": "23:00" },
+    "tuesday": { "open": "16:00", "close": "23:00" },
+    "wednesday": { "open": "16:00", "close": "23:00" },
+    "thursday": { "open": "16:00", "close": "23:30" },
+    "friday": { "open": "16:00", "close": "00:30" },
+    "saturday": { "open": "12:00", "close": "00:30" },
+    "sunday": { "open": "12:00", "close": "22:00" }
+  },
+  "features": [
+    "Reservations",
+    "Full Bar",
+    "Wine List",
+    "Private Dining",
+    "Wheelchair Accessible",
+    "Gluten-Free Options"
+  ],
+  "popular_dishes": [
+    {
+      "name": "Wood-Fired Margherita Pizza",
+      "price": 21.99,
+      "order_count": 8730
+    },
+    {
+      "name": "Homemade Lasagna",
+      "price": 24.99,
+      "order_count": 6420
+    },
+    {
+      "name": "Tiramisu",
+      "price": 11.99,
+      "order_count": 4890
+    }
+  ],
+  "last_updated": "2025-02-21T09:15:00Z"
+}
